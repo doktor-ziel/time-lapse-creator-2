@@ -8,6 +8,7 @@ import org.bytedeco.opencv.opencv_core.Size;
 import picocli.CommandLine;
 
 import static org.bytedeco.opencv.global.opencv_imgproc.resize;
+import static pl.backlog.green.ImageFlipper.Side.NONE;
 
 @CommandLine.Command(
         name = "timelapse.sh",
@@ -68,8 +69,18 @@ public class App implements Callable<Integer> {
     )
     private double angle;
 
+    @CommandLine.Option(
+            names = {"-l", "--flip"},
+            required = false,
+            paramLabel = "LEFT|RIGHT|NONE",
+            description = "flip",
+            defaultValue = "NONE"
+    )
+    private ImageFlipper.Side side;
+
     WatermarkAdder adder = null;
     ImageRotator rotator = null;
+    ImageFlipper flipper = null;
 
     private Mat transformOneFrame(Mat frame) {
         if (scale < 1) {
@@ -79,6 +90,10 @@ public class App implements Callable<Integer> {
         }
         if (adder != null) {
             frame = adder.apply(frame);
+        }
+        if (flipper != null) {
+            frame = flipper.apply(frame);
+
         }
         if (rotator != null) {
             frame = rotator.apply(frame);
@@ -93,6 +108,9 @@ public class App implements Callable<Integer> {
         }
         if (angle != 0.0) {
             rotator = ImageRotator.creatorRotator().setAngle(angle);
+        }
+        if (side != NONE) {
+            flipper = new ImageFlipper(side);
         }
         input.map(this::transformOneFrame)
                 .map(Utils.getConverter()::convert)
